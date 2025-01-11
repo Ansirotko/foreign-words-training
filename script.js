@@ -11,6 +11,9 @@ const currentWord = document.querySelector('#current-word');
 const traineProgress = document.querySelector('#words-progress');
 const examProgress = document.querySelector('#exam-progress');
 const examCorrect = document.querySelector('#correct-percent');
+const studyMode = document.querySelector('#study-mode');
+const examModeElement = document.querySelector('#exam-mode');
+const timeValue = document.querySelector('#timer')
 let currentIndex = 0;
 let examMode = false;
 let timer;
@@ -31,16 +34,14 @@ function makeCard() {
     document.querySelector('#card-back p span').textContent = word.example;
     currentWord.textContent = currentIndex + 1;
     updateProgress();
-}
 
-function updateProgress() {
-    const progressPercentage = Math.floor(((currentIndex + 1) / words.length) * 100);
-    traineProgress.value = progressPercentage;
-}
+    const nextButton = document.querySelector('#next');
+    const backButton = document.querySelector('#back');
 
-cards.addEventListener('click', () => {
-    cards.classList.toggle('active');
-});
+    nextButton.disabled = currentIndex >= words.length - 1;
+    backButton.disabled = currentIndex <= 0;
+
+}
 
 document.querySelector('#next').addEventListener('click', () => {
     if (currentIndex < words.length - 1) {
@@ -55,11 +56,19 @@ document.querySelector('#back').addEventListener('click', () => {
         makeCard();
     }
 });
-
 document.querySelector('#shuffle-words').addEventListener('click', () => {
     getRandomWord(words);
     currentIndex = 0;
     makeCard();
+});
+
+function updateProgress() {
+    const progressPercentage = Math.floor(((currentIndex + 1) / words.length) * 100);
+    traineProgress.value = progressPercentage;
+}
+
+cards.addEventListener('click', () => {
+    cards.classList.toggle('active');
 });
 
 function getRandomWord(array) {
@@ -71,16 +80,19 @@ function getRandomWord(array) {
 
 makeCard();
 
-document.querySelector('#exam').addEventListener('click', () => {
+document.querySelector('#exam').addEventListener('click', startExam);
+
+function startExam() {
     examMode = true;
-    document.querySelector('#study-mode').classList.add('hidden');
-    document.querySelector('#exam-mode').classList.remove('hidden');
+    document.querySelector('.study-cards').classList.add('hidden');
+    studyMode.classList.add('hidden');
+    examModeElement.classList.remove('hidden');
     correctAnswers = 0;
     wrongAnswers = 0;
     updateExamProgress();
     startTimer();
     createExamCards();
-});
+}
 
 function startTimer() {
     timer = setInterval(() => {
@@ -101,6 +113,7 @@ function renderCard(text) {
     card.textContent = text;
     return card;
 }
+let totalCards = words.length * 2;
 
 function createExamCards() {
     const mixWords = [...words].sort(() => Math.random() - 0.5);
@@ -114,9 +127,10 @@ function createExamCards() {
         const foreignCard = renderCard(word.foreign);
         const translationCard = renderCard(word.translation);
 
-        const cardClickHandler = (card) => {
-            word.attempts++;
-
+        const cardClickHandler = (card, isOrigin = false) => {
+            if (isOrigin) {
+                word.attempts++;
+            }
             if (!firstCard) {
                 firstCard = card;
                 firstCard.classList.add('correct');
@@ -124,17 +138,17 @@ function createExamCards() {
                 if ((firstCard.textContent === word.foreign && card.textContent === word.translation) ||
                     (card.textContent === word.foreign && firstCard.textContent === word.translation)) {
                     correctAnswers++;
-                    word.correct++;
 
                     updateExamProgress();
                     firstCard.classList.add('fade-out');
                     card.classList.add('fade-out', 'correct');
 
                     setTimeout(() => {
-                        firstCard.remove();
-                        card.remove();
                         firstCard = null;
-
+                        totalCards -= 2;
+                        if (totalCards === 0) {
+                            showResults();
+                        }
                     }, 300);
                 } else {
                     wrongAnswers++;
@@ -146,9 +160,10 @@ function createExamCards() {
                     }, 500);
                 }
             }
+
         };
 
-        foreignCard.addEventListener('click', () => cardClickHandler(foreignCard));
+        foreignCard.addEventListener('click', () => cardClickHandler(foreignCard, true));
         translationCard.addEventListener('click', () => cardClickHandler(translationCard));
 
         fragment.appendChild(foreignCard);
@@ -169,10 +184,11 @@ function updateExamProgress() {
 function showResults() {
     examMode = false;
     clearInterval(timer);
-    resultModal.classList.remove('hidden');
+
     const resultModal = document.querySelector('.results-modal');
     const template = document.querySelector('#word-stats');
     const resultContainer = resultModal.querySelector('.results-content');
+    timeValue.textContent = formatTime(totalSeconds);
 
     resultContainer.innerHTML = '';
 
@@ -183,6 +199,5 @@ function showResults() {
 
         resultContainer.appendChild(clone);
     });
-
-
+    resultModal.classList.remove('hidden');
 }
