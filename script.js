@@ -128,6 +128,9 @@ function createExamCards() {
         const translationCard = renderCard(word.translation);
 
         const cardClickHandler = (card, isOrigin = false) => {
+            if (card.classList.contains('fade-out')) {
+                return;
+            }
             if (isOrigin) {
                 word.attempts++;
             }
